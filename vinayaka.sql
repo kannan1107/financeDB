@@ -1,29 +1,22 @@
-SHOW DATABASES;
+CREATE DATABASE IF NOT EXISTS vinayaka;
 USE vinayaka;
 
--- user create 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'staff', 'user') DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE users 
-ADD role ENUM('admin', 'staff', 'user') DEFAULT 'user';
-
-DELETE FROM users 
-WHERE id = 1;
-
-select * from users;
-
--- CUSTOMERS TABLE
-CREATE TABLE customers (
+-- 3. Customers Table 
+-- (Created with final names directly to avoid multiple ALTER commands)
+CREATE TABLE IF NOT EXISTS customers (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id VARCHAR(50) UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    father_name VARCHAR(255) NOT NULL,
+    customer_id VARCHAR(50) UNIQUE NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL, -- Changed from father_name based on your RENAME logic
     email VARCHAR(150) UNIQUE NOT NULL,
     gender ENUM('Male','Female','Other'),
     date_of_birth DATE,
@@ -39,39 +32,9 @@ CREATE TABLE customers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE customers 
-RENAME COLUMN name TO first_name;
 
-ALTER TABLE customers 
-RENAME COLUMN father_name TO last_name;
-
-ALTER TABLE customers 
-RENAME COLUMN secure_mobile TO secureMobile;
-
-ALTER TABLE customers 
-RENAME COLUMN guarantor_name TO GuarantorName;
-
-ALTER TABLE customers 
-RENAME COLUMN guarantor_mobile TO GuarantorMobile;
-
-ALTER TABLE customers 
-RENAME COLUMN guarantor_address TO GuarantorAddress;
-
-ALTER TABLE customers 
-RENAME COLUMN guarantor_aadhaar TO GuarantorAathaar;
-
-
-
-
-
-
-SELECT * FROM customers;
-
-DROP TABLE  customers;
-
-
--- LOAN TABLE
-CREATE TABLE loans (
+-- 4. General Loans Table
+CREATE TABLE IF NOT EXISTS loans (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id VARCHAR(50),
     loan_purpose VARCHAR(100),
@@ -80,26 +43,15 @@ CREATE TABLE loans (
     interest_rate DECIMAL(5,2),
     tenure_months INT,
     emi_amount DECIMAL(10,2),
-    loan_status ENUM('Active','Closed','Defaulted'),
+    total_amount DECIMAL(10,2),
+    repayment_frequency VARCHAR(50),
+    loan_status ENUM('Active','Closed','Defaulted') DEFAULT 'Active',
     start_date DATE,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
 );
 
-ALTER TABLE loans ADD total_amount DECIMAL(10,2);
 
-ALTER TABLE loans ADD repayment_frequency VARCHAR(50);
-
-ALTER TABLE loans 
-add column total_amount DECIMAL(10,2) ;
-
-ALTER TABLE loans 
-add column repayment_frequency VARCHAR(50) ;
-
-SELECT * FROM  loans;
-
-
--- MICROFINANCE LOANS
-CREATE TABLE microfinance_loans (
+CREATE TABLE IF NOT EXISTS microfinance_loans (
     micro_loan_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id VARCHAR(50),
     loan_purpose VARCHAR(100),
@@ -109,16 +61,15 @@ CREATE TABLE microfinance_loans (
     interest_rate DECIMAL(5,2),
     tenure_months INT,
     emi_amount DECIMAL(10,2),
-    repayment_frequency ENUM('Monthly'),
-    loan_status ENUM('Active','Closed','Defaulted'),
+    repayment_frequency ENUM('Monthly') DEFAULT 'Monthly',
+    loan_status ENUM('Active','Closed','Defaulted') DEFAULT 'Active',
     start_date DATE,
     due_date DATE,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
 );
 
 
--- VEHICLE LOANS
-CREATE TABLE vehicle_loans (
+CREATE TABLE IF NOT EXISTS vehicle_details (
     vehicle_loan_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id VARCHAR(50),
     vehicle_type ENUM('Two Wheeler','Three Wheeler','Commercial'),
@@ -130,17 +81,12 @@ CREATE TABLE vehicle_loans (
     vehicle_dealer VARCHAR(100),
     vehicle_reg_no VARCHAR(100),
     start_date DATE,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
 );
 
-RENAME TABLE vehicle_loan_details TO vehicle_details;
 
-ALTER TABLE customers 
-RENAME COLUMN guarantor_aadhaar TO total_amount;
-
-
--- EMI PAYMENTS
-CREATE TABLE emi_payments (
+-- 7. EMI Payments Table
+CREATE TABLE IF NOT EXISTS emi_payments (
     emi_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id VARCHAR(50),
     bill_no VARCHAR(100),
@@ -154,10 +100,12 @@ CREATE TABLE emi_payments (
     payable_amount DECIMAL(10,2),
     bill_amount DECIMAL(10,2),
     start_date DATE,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
 );
 
 
+-- 8. Master View (Join Query)
+-- This query retrieves a summary of everything related to a customer
 SELECT 
     c.customer_id,
     c.first_name,
@@ -182,15 +130,9 @@ SELECT
     e.due_date
 
 FROM customers c
+LEFT JOIN loans l ON c.customer_id = l.customer_id
+LEFT JOIN microfinance_loans m ON c.customer_id = m.customer_id
+LEFT JOIN vehicle_details v ON c.customer_id = v.customer_id
+LEFT JOIN emi_payments e ON c.customer_id = e.customer_id;
 
-LEFT JOIN loans l 
-    ON c.customer_id = l.customer_id
 
-LEFT JOIN microfinance_loans m 
-    ON c.customer_id = m.customer_id
-
-LEFT JOIN vehicle_details v 
-    ON c.customer_id = v.customer_id
-
-LEFT JOIN emi_payments e 
-    ON c.customer_id = e.customer_id;
